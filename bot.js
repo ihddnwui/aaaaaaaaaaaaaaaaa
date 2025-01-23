@@ -9,11 +9,12 @@ const pageName = '82y73t62ftf63fr636333231223';
 
 let qrCodeURL = null; // Variável para armazenar o QR Code
 
-// Inicializa o cliente do WhatsApp Web
+// Inicializa o cliente do WhatsApp Web com autenticação persistente
 const client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new LocalAuth({ clientId: 'bot' }) // O clientId é usado para diferenciar instâncias se necessário
 });
 
+// Evento de QR Code
 client.on('qr', (qr) => {
     console.log('QR recebido:', qr);
     qrcode.toDataURL(qr, (err, url) => {
@@ -24,12 +25,13 @@ client.on('qr', (qr) => {
     });
 });
 
+// Evento quando o cliente está pronto
 client.on('ready', () => {
     console.log('O cliente está pronto!');
     qrCodeURL = null; // Desativar o QR Code depois de conectar
 });
 
-// Função para responder mensagens
+// Evento para responder mensagens recebidas
 client.on('message', (message) => {
     console.log(`Mensagem recebida de ${message.from}: ${message.body}`);
     message.reply('Oi, tudo bem? Aqui está minha resposta automática!');
