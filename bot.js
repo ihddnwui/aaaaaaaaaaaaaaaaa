@@ -73,5 +73,5 @@ app.get(`/${pageName}`, (req, res) => {
 // Inicializa o cliente e o servidor
 client.initialize();
 app.listen(port, () => {
-    console.log(`Servidor rodando em: http://localhost:${port}/${pageName}`);
+    console.log(`Servidor rodando em: https://aaaaaaaaaaaaaaaaa-38zq.onrender.com/${pageName}`);
 });
