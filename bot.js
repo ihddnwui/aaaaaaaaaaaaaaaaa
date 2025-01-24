@@ -1,44 +1,53 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const express = require('express');
-const qrcode = require('qrcode');
+const qrcode = require('qrcode-terminal');
+const execSync = require('child_process').execSync; // Para instalar dependências automaticamente
 
-// Configuração do Express
-const app = express();
-const port = process.env.PORT || 3000;
-const pageName = '82y73t62ftf63fr636333231223';
+// Função para instalar dependências automaticamente
+function instalarDependencias() {
+    try {
+        console.log('Verificando dependências...');
+        execSync('npm install whatsapp-web.js qrcode-terminal', { stdio: 'inherit' });
+        console.log('Dependências instaladas com sucesso!');
+    } catch (error) {
+        console.error('Erro ao instalar dependências:', error.message);
+        process.exit(1);
+    }
+}
 
-let qrCodeURL = null; // Variável para armazenar o QR Code
+// Verificar e instalar dependências antes de inicializar o bot
+instalarDependencias();
 
 // Inicializa o cliente do WhatsApp Web com autenticação persistente
 const client = new Client({
     authStrategy: new LocalAuth({ clientId: 'bot' }) // Persistência do login
 });
 
-// Evento de QR Code
+// Evento de QR Code - Exibe no terminal
 client.on('qr', (qr) => {
-    console.log('QR recebido:', qr);
-    qrcode.toDataURL(qr, (err, url) => {
-        if (!err) {
-            qrCodeURL = url;
-            console.log('QR Code atualizado. Acesse o QR Code no site para conectar.');
-        }
-    });
+    console.log('🔄 Gerando QR Code... Escaneie no WhatsApp para conectar:');
+    qrcode.generate(qr, { small: true }); // Exibe o QR Code no terminal
 });
 
 // Evento quando o cliente está pronto
 client.on('ready', () => {
-    console.log('QR Code escaneado com sucesso e WhatsApp conectado!');
-    qrCodeURL = null; // Desativar o QR Code depois de conectar
+    console.log('✅ Bot conectado com sucesso!');
 });
 
-// Eventos de erro e desconexão
-client.on('auth_failure', (msg) => console.error('Erro de autenticação:', msg));
-client.on('disconnected', (reason) => console.error('Cliente desconectado:', reason));
+// Evento de autenticação falha
+client.on('auth_failure', (msg) => {
+    console.error('❌ Erro de autenticação:', msg);
+});
 
-// Evento para responder mensagens recebidas
+// Evento de desconexão
+client.on('disconnected', (reason) => {
+    console.error('⚠️ Cliente desconectado:', reason);
+    console.log('🔄 Tentando reconectar...');
+    client.initialize(); // Recomeça o cliente
+});
+
+// Evento de mensagens recebidas
 client.on('message', (message) => {
-    console.log(`Mensagem recebida de ${message.from}: ${message.body}`);
-    // Resposta automática
+    console.log(`📩 Mensagem recebida de ${message.from}: ${message.body}`);
     if (message.body.toLowerCase() === 'oi') {
         message.reply('Olá! Tudo bem? Aqui está minha resposta automática!');
     } else {
@@ -46,32 +55,25 @@ client.on('message', (message) => {
     }
 });
 
-// Rota para exibir o QR Code
-app.get(`/${pageName}`, (req, res) => {
-    if (qrCodeURL) {
-        res.send(`
-            <html>
-                <body style="text-align: center; font-family: Arial;">
-                    <h1>Escaneie o QR Code para conectar</h1>
-                    <img src="${qrCodeURL}" alt="QR Code" />
-                    <p>Este QR Code expira automaticamente após o uso.</p>
-                </body>
-            </html>
-        `);
-    } else {
-        res.status(404).send(`
-            <html>
-                <body style="text-align: center; font-family: Arial;">
-                    <h1>QR Code expirado ou já conectado!</h1>
-                    <p>Por favor, reinicie o bot para gerar um novo QR Code.</p>
-                </body>
-            </html>
-        `);
+// Evento de mudança de status de conexão
+client.on('change_state', (state) => {
+    console.log(`📡 Status de conexão: ${state}`);
+    if (state === 'CONNECTED') {
+        console.log('✅ Bot está online.');
+    } else if (state === 'TIMEOUT') {
+        console.error('⚠️ Problema de latência detectado.');
     }
 });
 
-// Inicializa o cliente e o servidor
+// Inicializa o cliente e registra eventos adicionais
 client.initialize();
-app.listen(port, () => {
-    console.log(`Servidor rodando em: https://aaaaaaaaaaaaaaaaa-38zq.onrender.com/${pageName}`);
+console.log('🚀 Iniciando o bot... Aguarde o QR Code no terminal.');
+
+// Adicionar tratamento para erros inesperados
+process.on('uncaughtException', (err) => {
+    console.error('❗ Erro inesperado:', err.message);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❗ Rejeição não tratada:', reason);
 });
