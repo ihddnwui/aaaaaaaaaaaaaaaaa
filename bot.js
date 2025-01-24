@@ -11,7 +11,7 @@ let qrCodeURL = null; // Variável para armazenar o QR Code
 
 // Inicializa o cliente do WhatsApp Web com autenticação persistente
 const client = new Client({
-    authStrategy: new LocalAuth({ clientId: 'bot' }) // O clientId é usado para diferenciar instâncias se necessário
+    authStrategy: new LocalAuth({ clientId: 'bot' }) // Persistência do login
 });
 
 // Evento de QR Code
@@ -20,24 +20,33 @@ client.on('qr', (qr) => {
     qrcode.toDataURL(qr, (err, url) => {
         if (!err) {
             qrCodeURL = url;
-            console.log('QR Code atualizado.');
+            console.log('QR Code atualizado. Acesse o QR Code no site para conectar.');
         }
     });
 });
 
 // Evento quando o cliente está pronto
 client.on('ready', () => {
-    console.log('O cliente está pronto!');
+    console.log('QR Code escaneado com sucesso e WhatsApp conectado!');
     qrCodeURL = null; // Desativar o QR Code depois de conectar
 });
+
+// Eventos de erro e desconexão
+client.on('auth_failure', (msg) => console.error('Erro de autenticação:', msg));
+client.on('disconnected', (reason) => console.error('Cliente desconectado:', reason));
 
 // Evento para responder mensagens recebidas
 client.on('message', (message) => {
     console.log(`Mensagem recebida de ${message.from}: ${message.body}`);
-    message.reply('Oi, tudo bem? Aqui está minha resposta automática!');
+    // Resposta automática
+    if (message.body.toLowerCase() === 'oi') {
+        message.reply('Olá! Tudo bem? Aqui está minha resposta automática!');
+    } else {
+        message.reply('Desculpe, não entendi sua mensagem.');
+    }
 });
 
-// Configuração da rota para o QR Code
+// Rota para exibir o QR Code
 app.get(`/${pageName}`, (req, res) => {
     if (qrCodeURL) {
         res.send(`
@@ -61,7 +70,7 @@ app.get(`/${pageName}`, (req, res) => {
     }
 });
 
-// Inicializa o cliente do WhatsApp e o servidor
+// Inicializa o cliente e o servidor
 client.initialize();
 app.listen(port, () => {
     console.log(`Servidor rodando em: http://localhost:${port}/${pageName}`);
