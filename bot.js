@@ -23,27 +23,72 @@ const client = new Client({
     authStrategy: new LocalAuth({ clientId: 'bot' }) // Persistência do login
 });
 
-// Configuração do servidor Express para exibir o QR Code
+// Configuração do servidor Express para exibir a página do QR Code
 const app = express();
 let qrCodeUrl = null; // Variável para armazenar o QR Code gerado
-let qrCodeTimeout = null; // Timeout para expiração do QR Code
 
-// Rota para exibir o QR Code
-app.get('/:dynamicPath', (req, res) => {
+// Rota para exibir a página com o QR Code
+app.get('/', (req, res) => {
     if (qrCodeUrl) {
         res.send(`
             <html>
-                <body style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
+                <head>
+                    <title>WhatsApp Bot</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            height: 100vh;
+                            background-color: #f0f0f0;
+                        }
+                        h1 {
+                            color: #0078d4;
+                        }
+                        .qr-container {
+                            background-color: white;
+                            border-radius: 10px;
+                            padding: 20px;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        }
+                        img {
+                            max-width: 250px;
+                            height: auto;
+                        }
+                    </style>
+                </head>
+                <body>
                     <h1>Escaneie o QR Code para conectar ao WhatsApp</h1>
-                    <img src="${qrCodeUrl}" alt="QR Code" style="max-width: 300px; height: auto;" />
+                    <div class="qr-container">
+                        <img src="${qrCodeUrl}" alt="QR Code" />
+                    </div>
                 </body>
             </html>
         `);
     } else {
         res.send(`
             <html>
-                <body style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
-                    <h1>O QR Code expirou ou o site está fora do ar.</h1>
+                <head>
+                    <title>WhatsApp Bot</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            height: 100vh;
+                            background-color: #f0f0f0;
+                        }
+                        h1 {
+                            color: #0078d4;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>Bot conectado com sucesso! Você pode agora usar o WhatsApp.</h1>
                 </body>
             </html>
         `);
@@ -60,53 +105,25 @@ app.listen(PORT, () => {
 client.on('qr', async (qr) => {
     console.log('🔄 Gerando QR Code... Escaneie no WhatsApp para conectar:');
     qrCodeUrl = await qrcode.toDataURL(qr); // Gera a URL do QR Code para ser exibida no site
-    console.log(`QR Code disponível em: https://aaaaaaaaaaaaaaaaa-zsvk.onrender.com/832677ahla78363uh7287782`);
+    console.log(`QR Code disponível em: http://localhost:${PORT}`);
 
-    // Configura timeout para remover o QR Code após expiração
-    if (qrCodeTimeout) clearTimeout(qrCodeTimeout);
-    qrCodeTimeout = setTimeout(() => {
+    // Redefine o QR Code a cada novo código
+    setTimeout(() => {
         qrCodeUrl = null;
-        console.log('⚠️ O QR Code expirou.');
-    }, 60000); // Expira após 60 segundos
+    }, 60000); // Expira após 60 segundos, como precaução
 });
 
 // Evento quando o cliente está pronto
 client.on('ready', () => {
     console.log('✅ Bot conectado com sucesso!');
     qrCodeUrl = null; // Limpa o QR Code após a conexão
-    if (qrCodeTimeout) clearTimeout(qrCodeTimeout);
-});
-
-// Evento de autenticação falha
-client.on('auth_failure', (msg) => {
-    console.error('❌ Erro de autenticação:', msg);
 });
 
 // Evento de desconexão
 client.on('disconnected', (reason) => {
     console.error('⚠️ Cliente desconectado:', reason);
     console.log('🔄 Tentando reconectar...');
-    client.initialize(); // Recomeça o cliente
-});
-
-// Evento de mensagens recebidas
-client.on('message', (message) => {
-    console.log(`📩 Mensagem recebida de ${message.from}: ${message.body}`);
-    if (message.body.toLowerCase() === 'oi') {
-        message.reply('Olá! Tudo bem? Aqui está minha resposta automática!');
-    } else {
-        message.reply('Desculpe, não entendi sua mensagem.');
-    }
-});
-
-// Evento de mudança de status de conexão
-client.on('change_state', (state) => {
-    console.log(`📡 Status de conexão: ${state}`);
-    if (state === 'CONNECTED') {
-        console.log('✅ Bot está online.');
-    } else if (state === 'TIMEOUT') {
-        console.error('⚠️ Problema de latência detectado.');
-    }
+    client.initialize(); // Recomeça o cliente e mantém a conexão ativa
 });
 
 // Inicializa o cliente e registra eventos adicionais
